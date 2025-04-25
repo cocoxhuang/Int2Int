@@ -39,7 +39,7 @@ def format_data(seq_len, input_file):
         line = line.split()
         # add the first list to table1 and the second list to table2
         input.append(encode_integer_array(line[0:seq_len]))
-        output.append(encode_integer_array(line[seq_len:12]))
+        output.append(encode_integer_array(line[seq_len:seq_len*2]))
     
     # put all in a file
     df = pd.DataFrame()
