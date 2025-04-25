@@ -73,11 +73,11 @@ class ArithmeticEnvironment(object):
         self.base = params.base
         self.max_class = params.max_class
 
-        #if self.operation == 'data':
-            #assert params.data_types, "argument --data_types is required"
-            #i, o = params.data_types.split(':')
-            #self.input_encoder = data_type_to_encoder(params, i)
-            #self.output_encoder = data_type_to_encoder(params, o)
+        # if self.operation == 'data':
+        #     assert params.data_types, "argument --data_types is required"
+        #     i, o = params.data_types.split(':')
+        #     self.input_encoder = data_type_to_encoder(params, i)
+        #     self.output_encoder = data_type_to_encoder(params, o)
         #    self.input_encoder = encoders.NumberArray(params, 5, 'V', 1)
         #    self.output_encoder = encoders.SymbolicInts(0, 10)
         #    dims=[]
@@ -96,13 +96,21 @@ class ArithmeticEnvironment(object):
             dims = []
             max_dim =  4 if self.operation in ["fraction_compare", "fraction_determinant", "fraction_add", "fraction_product"] else 2
             tensor_dim =  1
-            if self.operation in  ["fraction_add", "fraction_product", "fraction_simplify"]:
-                self.output_encoder = encoders.NumberArray(params, 2, 'V', tensor_dim )
+            if self.operation == 'data':
+                assert params.data_types, "argument --data_types is required"
+                i, o = params.data_types.split(':')
+                self.output_encoder = data_type_to_encoder(params, o)
+            elif self.operation in  ["fraction_add", "fraction_product", "fraction_simplify"]:
+                self.output_encoder = encoders.NumberArray(params, 2, 'V', tensor_dim)
             elif self.operation in ["fraction_round", "gcd", "fraction_determinant","modular_add","modular_mul","elliptic"]:
                 self.output_encoder = encoders.PositionalInts(params.base)
             else:
                 self.output_encoder = encoders.SymbolicInts(0, 1)
-        self.input_encoder = encoders.NumberArray(params, max_dim, 'V', tensor_dim)
+        if self.operation == 'data':
+            i, o = params.data_types.split(':')
+            self.input_encoder = data_type_to_encoder(params, i)
+        else:
+            self.input_encoder = encoders.NumberArray(params, max_dim, 'V', tensor_dim)
         assert not self.export_pred or isinstance(self.output_encoder, (encoders.SymbolicInts, encoders.PositionalInts))
 
         self.generator = generators.Sequence(params, dims)

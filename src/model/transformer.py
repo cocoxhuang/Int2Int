@@ -711,7 +711,17 @@ class TransformerModel(nn.Module):
 
         # add <EOS> to unfinished sentences
         if cur_len == max_len:
-            generated[-1].masked_fill_(unfinished_sents.byte(), self.eos_index)
+            try:
+                generated[-1].masked_fill_(unfinished_sents.byte(), self.eos_index)
+            except Exception as e:
+                generated[-1].masked_fill_(unfinished_sents.bool(), self.eos_index)
+                # print("My message is: ")
+                # print(e)
+                # print(e == "masked_fill only supports boolean masks, but got dtype Byte")
+                # if e == "masked_fill only supports boolean masks, but got dtype Byte":
+                #     generated[-1].masked_fill_(unfinished_sents.bool(), self.eos_index)
+                # else:
+                #     raise e
 
         # sanity check
         assert (generated == self.eos_index).sum() == 2 * bs
