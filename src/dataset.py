@@ -236,7 +236,6 @@ class EnvDataset(Dataset):
                     index = self.env.rng.randint(len(self.data))
                     idx = index
 
-            
         x, y = self.data[idx]
         x = x.split()
         y = y.split()
