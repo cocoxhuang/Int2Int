@@ -3,7 +3,7 @@ import random
 import os
 import pandas as pd
 from sage.all import DyckWords
-from dyckwords import area_data, dinv_data, bounce_data
+from dyckwords import area_data, dinv_data, bounce_data, area_dinv_data, bounce_area_data, area_dinv_bounce_data, zeta_map_data
 import time
 
 def encode_integer(val, base=1000, digit_sep=" "):
@@ -29,36 +29,39 @@ def format_data(task, seq_len, input_file):
     # create a table for the first list and another table for the second list
     input = []
     output = []
-    if task == "seq2seq":
-        for line in lines:
-            # remove the brackets and split by comma
-            line = line.replace('[', '').replace(']', '').replace(',', '')
-            # split by space
-            line = line.split()
-            # add the first list to table1 and the second list to table2
-            input.append(encode_integer_array(line[0:seq_len]))
-            output.append(encode_integer_array(line[seq_len:seq_len*2]))
-        
-        # put all in a file
-        df = pd.DataFrame()
-        df['x'] = [f"V{seq_len} " + x for x in input]
-        df['y'] = [f"V{seq_len} " + x for x in output]
+    if task == "bijection" or task == "zeta_map":
+        output_len = seq_len
     if task in ["area", "dinv", "bounce"]:
         # a line is of format" [[1, 0, 1, 1, 0, 0], 1]
-        for line in lines:
-            # remove the brackets and split by comma
-            line = line.replace('[', '').replace(']', '').replace(',', '')
-            # split by space
-            line = line.split()
-            # add the first list to table1 and the second list to table2
-            input.append(encode_integer_array(line[0:seq_len]))
+        output_len = 1
+    if task in ["area_dinv", "bounce_area"]:
+        # a line is of format" [[1, 0, 1, 1, 0, 0], 1, 2]
+        output_len = 2
+    if task == "area_dinv_bounce":
+        # a line is of format" [[1, 0, 1, 1, 0, 0], 1, 2, 3]
+        output_len = 3
+    for line in lines:
+        # remove the brackets and split by comma
+        line = line.replace('[', '').replace(']', '').replace(',', '')
+        # split by space
+        line = line.split()
+        input.append(encode_integer_array(line[0:seq_len]))
+        if task == "bijection" or task == "zeta_map":
+            output.append(encode_integer_array(line[seq_len:seq_len+output_len]))
+        if task in ["area", "dinv", "bounce"]:
+            # a line is of format" [[1, 0, 1, 1, 0, 0], 1]
             output.append(encode_integer_array(line[seq_len:seq_len+1]))
-
-        # put all in a file
-        df = pd.DataFrame()
-        df['x'] = [f"V{seq_len} " + x for x in input]
-        df['y'] = [f"V1 " + x for x in output]
-        # df['y'] = output
+        if task in ["area_dinv", "bounce_area"]:
+            # a line is of format" [[1, 0, 1, 1, 0, 0], 1, 2]
+            output.append(encode_integer_array(line[seq_len:seq_len]))
+        if task == "area_dinv_bounce":
+            # a line is of format" [[1, 0, 1, 1, 0, 0], 1, 2, 3]
+            output.append(encode_integer_array(line[seq_len:seq_len+output_len]))
+    # put all in a file
+    df = pd.DataFrame()
+    df['x'] = [f"V{seq_len} " + x for x in input]
+    df['y'] = [f"V{output_len} " + x for x in output]
+    # df['y'] = output
 
     # output df as txt, sep by \t
     if input_file.endswith('.txt'):
@@ -104,10 +107,15 @@ def shuffle_and_split(task, input_file, seq_len, train_file, test_file, val_file
         f.writelines(test_lines)
 
     # write out a recommned command file to run the model
-    if task == "seq2seq":
-        cmd = f"python train.py --operation data --data_types int[{seq_len}]:int[{seq_len}] --train_data {train_file} --eval_data {val_file},{test_file} --dump_path results --exp_name qtCat --exp_id 1 --epoch_size 10000 --eval_size 1000"
+    cmd = f"python train.py --operation data --train_data {train_file} --eval_data {val_file},{test_file} --dump_path results --exp_name qtCat --exp_id 1 --epoch_size 10000 --eval_size 1000"
+    if task == "bijection" or task == "zeta_map":
+        cmd = cmd + f" --data_types int[{seq_len}]:int[{seq_len}]"
     if task in ["area", "dinv", "bounce"]:
-        cmd = f"python train.py --operation data --data_types int[{seq_len}]:int[1] --train_data {train_file} --eval_data {val_file},{test_file} --dump_path results --exp_name qtCat --exp_id 1 --epoch_size 10000 --eval_size 1000"
+        cmd = cmd + f" --data_types int[{seq_len}]:int[1]"
+    if task in ["area_dinv", "bounce_area"]:
+        cmd = cmd + f" --data_types int[{seq_len}]:int[2]"
+    if task == "area_dinv_bounce":
+        cmd = cmd + f" --data_types int[{seq_len}]:int[3]"
     with open("qtCat_CMD.txt", "w") as f:
         f.write(cmd)
         f.write("\n\nYou might need to change parameters in the command such as  --exp_id, --epoch_size, --eval_size, -optimizer, --architecture, --n_enc_layers, etc.")
@@ -125,7 +133,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Shuffle a text file and split into train/test files.")
     parser.add_argument("--input_file", help="Path to the input text file")
     parser.add_argument("--seq_len", type=int, help="Length of the input and output sequence")
-    parser.add_argument("--task", type=str, help="Prediction task name: area, dinv, bounce, seq2seq")
+    parser.add_argument("--task", type=str, help="Prediction task name: area, dinv, bounce, bijection, area_dinv, bounce_area, area_dinv_bounce, zeta_map")
     parser.add_argument("--train_file", help="Path to output file for training data")
     parser.add_argument("--test_file", help="Path to output file for testing data")
     parser.add_argument("--val_file", help="Path to output file for validation data")
@@ -133,7 +141,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_ratio", type=float, default=0.2, help="Proportion of data for testing (default: 0.2)")
     args = parser.parse_args()
 
-    gen_data_tasks = ["area", "dinv", "bounce"] # tasks that the script can generate data for
+    gen_data_tasks = ["area", "dinv", "bounce", "area_dinv", "bounce_area", "area_dinv_bounce", "zeta_map"] # tasks that the script can generate data for
 
     assert args.task, "Task name is required."
     if args.task not in gen_data_tasks:
@@ -144,7 +152,7 @@ if __name__ == "__main__":
         assert args.input_file.endswith('.txt'), "Input file must be a .txt file."
         input_file = args.input_file
     else:
-        assert args.task in gen_data_tasks, "We can only generate area and dinv data."
+        assert args.task in gen_data_tasks, "We can only generate area, dinv, bounce data."
         input_file = f"./data/{args.task}_{args.seq_len // 2}.txt"
         # generate dyck words data
         assert (args.seq_len % 2) == 0, "Sequence length must be even as they are the length of Dyckwords."
