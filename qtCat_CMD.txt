@@ -1,0 +1,4 @@
+python train.py --operation data --train_data ./data/zeta_map_11_train.txt --eval_data ./data/zeta_map_11_val.txt,./data/zeta_map_11_test.txt --dump_path results --exp_name qtCat --exp_id 1 --epoch_size 10000 --eval_size 1000 --data_types int[22]:int[22]
+
+You might need to change parameters in the command such as  --exp_id, --epoch_size, --eval_size, -optimizer, --architecture, --n_enc_layers, etc.
+Check https://github.com/cocoxhuang/Int2Int/blob/main/train.py for more details.
